@@ -10,7 +10,7 @@
    - 找到 "Pages" 部分
    - 选择 "main" 分支作为源
    - 点击保存
-3. 几分钟后，你的游戏将在 `https://[你的用户名].github.io/[仓库名]` 上线
+3. 几分钟后，你的游戏将在 `https://clapanda.github.io/TinyWaste-master` 上线
 
 ## 游戏特点
 
