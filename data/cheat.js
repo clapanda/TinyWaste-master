@@ -31,16 +31,19 @@ function installStatusHook() {
         
         // 重写caculate函数，添加锁定检查
         window.caculate = function(data, name, value) {
-            // 如果是PLAYER_STATUS且属性被锁定，则不进行修改
-            if (data === PLAYER_STATUS && LOCKED_STATUS[name]) {
-                return; // 属性被锁定，忽略变化
+            // 只有当LOCKED_STATUS不为空（有属性被锁定）时才进行检查
+            if (Object.keys(LOCKED_STATUS).length > 0) {
+                // 如果是PLAYER_STATUS且属性被锁定，则不进行修改
+                if (data === PLAYER_STATUS && LOCKED_STATUS[name]) {
+                    return; // 属性被锁定，忽略变化
+                }
             }
             
             // 否则调用原始函数
             window.originalCaculate(data, name, value);
         };
         
-        console.log(CHEAT_LOG_PREFIX, "状态钩子已安装，可以锁定属性值");
+        console.log(CHEAT_LOG_PREFIX, "状态钩子已安装，但只在有属性被锁定时生效");
     } catch(e) {
         console.error(CHEAT_LOG_PREFIX, "安装状态钩子失败", e);
     }
@@ -86,7 +89,7 @@ function setupCheatConsole() {
             console.log("  - 锁定的属性在listAttrs()中会显示🔒标记");
             console.log("---------------------------------------");
             console.log("快捷键：");
-            console.log("  Ctrl+Shift+C               - 切换金手指面板");
+            console.log("  Alt+X                     - 切换金手指面板");
             console.log("---------------------------------------");
             console.log("注意事项：");
             console.log("  1. 属性名必须用引号括起来，例如 'life'");
@@ -292,7 +295,24 @@ function setupCheatConsole() {
         // 解锁所有属性
         window.cheat.unlockAll = function() {
             console.log(CHEAT_LOG_PREFIX, "正在解锁所有属性...");
+            
+            // 清空锁定状态
             LOCKED_STATUS = {};
+            
+            // 恢复原始的caculate函数，确保游戏正常运行
+            if (typeof window.originalCaculate !== 'undefined') {
+                window.caculate = window.originalCaculate;
+                console.log(CHEAT_LOG_PREFIX, "已恢复原始状态计算函数");
+            }
+            
+            // 重新安装钩子，但此时LOCKED_STATUS为空，不会影响游戏
+            setTimeout(function() {
+                installStatusHook();
+            }, 100);
+            
+            // 更新UI
+            updateLockButtonStatus();
+            
             console.log(CHEAT_LOG_PREFIX, "所有属性已解锁 ✅");
         };
         
@@ -581,10 +601,6 @@ function createPlaceholderSections() {
             <p>在浏览器控制台(F12)中可使用以下命令:</p>
             <ul>
                 <li><code>cheat.help()</code> - 显示帮助</li>
-                <li><code>cheat.status()</code> - 显示状态</li>
-                <li><code>cheat.set('属性', 值)</code> - 设置属性值</li>
-                <li><code>cheat.max('属性')</code> - 最大化属性</li>
-                <li><code>cheat.maxAll()</code> - 全部最大化</li>
             </ul>
         `);
         $(consoleSection).append(consoleHelp);
@@ -624,45 +640,45 @@ function addCheatStyles() {
         var style = document.createElement('style');
         style.type = 'text/css';
         style.innerHTML = `
-        #cheatEmojiBtn {
-            position: fixed;
-            right: 10px;
-            top: 10px;
-            font-size: 24px;
-            background-color: rgba(0, 0, 0, 0.5);
-            color: #fff;
-            width: 40px;
-            height: 40px;
-            line-height: 40px;
-            text-align: center;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 1000;
-            opacity: 0.7;
-            transition: all 0.3s ease;
-        }
-        
-        #cheatEmojiBtn:hover {
-            opacity: 1;
-            transform: scale(1.1);
-            background-color: rgba(255, 50, 50, 0.7);
-        }
-        
-        .cheatPanel {
-            position: fixed;
-            top: 60px;
-            right: 10px;
-            width: 300px;
-            max-height: 80vh;
-            overflow-y: auto;
-            background-color: rgba(0, 0, 0, 0.85);
-            border: 1px solid #666;
-            border-radius: 5px;
-            padding: 10px;
-            z-index: 1000;
-            color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
+            #cheatEmojiBtn {
+        position: fixed;
+        right: 10px;
+        top: 10px;
+        font-size: 24px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        text-align: center;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 9999999;
+        opacity: 0.7;
+        transition: all 0.3s ease;
+    }
+    
+    #cheatEmojiBtn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+        background-color: rgba(255, 50, 50, 0.7);
+    }
+    
+    .cheatPanel {
+        position: fixed;
+        top: 60px;
+        right: 10px;
+        width: 300px;
+        max-height: 80vh;
+        overflow-y: auto;
+        background-color: rgba(0, 0, 0, 0.85);
+        border: 1px solid #666;
+        border-radius: 5px;
+        padding: 10px;
+        z-index: 9999999;
+        color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
         
         .cheatStatus {
             background-color: rgba(0, 0, 0, 0.5);
@@ -799,11 +815,12 @@ $(document).ready(function() {
         }, 2000);
     });
     
-    // 添加全局快捷键 (Ctrl+Shift+C) 来切换金手指面板
+    // 添加全局快捷键 (Alt+X) 来切换金手指面板
     $(document).keydown(function(e) {
-        // Ctrl+Shift+C
-        if (e.ctrlKey && e.shiftKey && e.which === 67) {
-            console.log(CHEAT_LOG_PREFIX, "检测到快捷键，切换金手指面板");
+        // Alt+X
+        if (e.altKey && e.which === 88) {
+            e.preventDefault(); // 阻止默认行为
+            console.log(CHEAT_LOG_PREFIX, "检测到快捷键Alt+X，切换金手指面板");
             if (typeof window.cheat !== "undefined") {
                 window.cheat.toggle();
             } else if (CHEAT_ENABLED) {
