@@ -1,8 +1,9 @@
 <html oncontextmenu="javascript:event.preventDefault();">
 <head>
-    <meta name="viewport" content="width=device-width,height=device-height;initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no,minimal-ui">
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no,minimal-ui">
     <meta http-equiv="Cache-Control" content="max-age:259200">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <!-- uc强制竖屏 <meta name="screen-orientation" content="portrait"> -->
@@ -33,6 +34,22 @@
     <!-- 移除广告代码，简化GitHub Pages部署 -->
 </body>
 <script type="text/javascript" src="./data/loader.js"></script>
+<!-- 添加调试信息，确保金手指正确加载 -->
+<script>
+    // 监听游戏加载完成事件
+    window.addEventListener('load', function() {
+        console.log("页面加载完成，等待游戏初始化...");
+        
+        // 定期检查游戏是否已加载
+        var checkGameLoaded = setInterval(function() {
+            if (typeof PLAYER_STATUS !== "undefined" && typeof STATUS_LIST !== "undefined") {
+                console.log("游戏已加载完成，可以使用金手指功能");
+                console.log("使用 cheat.help() 查看可用命令");
+                clearInterval(checkGameLoaded);
+            }
+        }, 2000);
+    });
+</script>
 <!-- 移除Google Analytics代码，简化GitHub Pages部署 -->
 <!--
 作者：海带酒

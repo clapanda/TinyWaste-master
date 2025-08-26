@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyWaste - 简易金手指</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        h1 {
+            color: #ff9900;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #ff9900;
+            color: #000;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn:hover {
+            background-color: #ffb340;
+        }
+        
+        .cheat-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            text-align: left;
+        }
+        
+        .attribute-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .attribute-row label {
+            flex: 1;
+        }
+        
+        .attribute-row input {
+            width: 60px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 5px;
+            margin-right: 10px;
+        }
+        
+        .attribute-row button {
+            background-color: #444;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .attribute-row button:hover {
+            background-color: #555;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        
+        .section h3 {
+            color: #ff9900;
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            font-size: 0.8em;
+            color: #999;
+        }
+        
+        #status {
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #333;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TinyWaste 简易金手指</h1>
+        <p>这个页面提供了一个简单的金手指功能，可以直接修改游戏属性。</p>
+        
+        <div>
+            <a href="index.html" class="btn">返回游戏</a>
+            <button id="maxAllBtn" class="btn">全部最大化</button>
+        </div>
+        
+        <div id="status">状态: 等待加载游戏数据...</div>
+        
+        <div class="cheat-panel" id="cheatPanel">
+            <div class="section">
+                <h3>基础属性</h3>
+                <div id="basicAttributes"></div>
+            </div>
+            
+            <div class="section">
+                <h3>特殊属性</h3>
+                <div id="specialAttributes"></div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>TinyWaste 金手指工具 | 原作者：海带酒</p>
+        </div>
+    </div>
+    
+    <script>
+        // 游戏数据
+        let PLAYER_STATUS = {};
+        let STATUS_LIST = [];
+        let SPECIAL_LIST = [];
+        
+        // 从localStorage加载游戏数据
+        function loadGameData() {
+            try {
+                // 获取所有存档
+                const keys = Object.keys(localStorage);
+                let saveData = null;
+                
+                // 查找最新的存档
+                for (const key of keys) {
+                    if (key.startsWith('tinywaste_save_') || key === 'autosave') {
+                        saveData = localStorage.getItem(key);
+                        break;
+                    }
+                }
+                
+                if (!saveData) {
+                    document.getElementById('status').textContent = '状态: 未找到游戏存档';
+                    return false;
+                }
+                
+                // 解析存档数据
+                const gameData = JSON.parse(unescape(saveData));
+                
+                // 提取需要的数据
+                PLAYER_STATUS = gameData.PLAYER_STATUS || {};
+                
+                // 创建属性列表
+                STATUS_LIST = ['life', 'hunger', 'thirst', 'energy', 'san', 'radiation'];
+                SPECIAL_LIST = ['endurance', 'perception', 'charm', 'luck', 'agility'];
+                
+                document.getElementById('status').textContent = '状态: 游戏数据已加载';
+                return true;
+            } catch (e) {
+                document.getElementById('status').textContent = '状态: 加载游戏数据失败 - ' + e.message;
+                return false;
+            }
+        }
+        
+        // 创建属性修改界面
+        function createAttributeUI() {
+            const basicContainer = document.getElementById('basicAttributes');
+            const specialContainer = document.getElementById('specialAttributes');
+            
+            // 创建基础属性UI
+            for (const attr of STATUS_LIST) {
+                if (PLAYER_STATUS[attr]) {
+                    const row = createAttributeRow(attr, PLAYER_STATUS[attr].name || attr);
+                    basicContainer.appendChild(row);
+                }
+            }
+            
+            // 创建特殊属性UI
+            for (const attr of SPECIAL_LIST) {
+                if (PLAYER_STATUS[attr]) {
+                    const row = createAttributeRow(attr, PLAYER_STATUS[attr].name || attr);
+                    specialContainer.appendChild(row);
+                }
+            }
+        }
+        
+        // 创建属性行
+        function createAttributeRow(attr, name) {
+            const row = document.createElement('div');
+            row.className = 'attribute-row';
+            
+            // 属性名称
+            const label = document.createElement('label');
+            label.textContent = name;
+            row.appendChild(label);
+            
+            // 属性值输入框
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.id = 'attr_' + attr;
+            
+            // 设置初始值
+            if (PLAYER_STATUS[attr] && PLAYER_STATUS[attr].value !== undefined) {
+                input.value = Math.floor(PLAYER_STATUS[attr].value);
+            }
+            
+            // 绑定修改事件
+            input.addEventListener('change', function() {
+                const value = parseInt(this.value);
+                modifyAttribute(attr, value);
+            });
+            
+            row.appendChild(input);
+            
+            // 最大值按钮
+            const maxBtn = document.createElement('button');
+            maxBtn.textContent = '最大';
+            maxBtn.addEventListener('click', function() {
+                const max = PLAYER_STATUS[attr].max || 999;
+                document.getElementById('attr_' + attr).value = max;
+                modifyAttribute(attr, max);
+            });
+            
+            row.appendChild(maxBtn);
+            
+            return row;
+        }
+        
+        // 修改属性值
+        function modifyAttribute(attr, value) {
+            try {
+                if (PLAYER_STATUS[attr] !== undefined && PLAYER_STATUS[attr].value !== undefined) {
+                    // 记录修改前的值
+                    const oldValue = PLAYER_STATUS[attr].value;
+                    
+                    // 修改属性值
+                    PLAYER_STATUS[attr].value = value;
+                    
+                    // 保存修改后的数据
+                    saveGameData();
+                    
+                    document.getElementById('status').textContent = `状态: 已修改 ${PLAYER_STATUS[attr].name || attr} 从 ${oldValue} 到 ${value}`;
+                }
+            } catch (e) {
+                document.getElementById('status').textContent = '状态: 修改属性失败 - ' + e.message;
+            }
+        }
+        
+        // 保存游戏数据
+        function saveGameData() {
+            try {
+                // 获取所有存档
+                const keys = Object.keys(localStorage);
+                
+                // 更新所有存档
+                for (const key of keys) {
+                    if (key.startsWith('tinywaste_save_') || key === 'autosave') {
+                        const saveData = localStorage.getItem(key);
+                        const gameData = JSON.parse(unescape(saveData));
+                        
+                        // 更新属性数据
+                        gameData.PLAYER_STATUS = PLAYER_STATUS;
+                        
+                        // 保存回localStorage
+                        localStorage.setItem(key, escape(JSON.stringify(gameData)));
+                    }
+                }
+                
+                return true;
+            } catch (e) {
+                document.getElementById('status').textContent = '状态: 保存游戏数据失败 - ' + e.message;
+                return false;
+            }
+        }
+        
+        // 全部最大化
+        function maxAllAttributes() {
+            try {
+                // 基础属性
+                for (const attr of STATUS_LIST) {
+                    if (PLAYER_STATUS[attr]) {
+                        const max = PLAYER_STATUS[attr].max || 999;
+                        PLAYER_STATUS[attr].value = max;
+                        document.getElementById('attr_' + attr).value = max;
+                    }
+                }
+                
+                // 特殊属性
+                for (const attr of SPECIAL_LIST) {
+                    if (PLAYER_STATUS[attr]) {
+                        const max = PLAYER_STATUS[attr].max || 999;
+                        PLAYER_STATUS[attr].value = max;
+                        document.getElementById('attr_' + attr).value = max;
+                    }
+                }
+                
+                // 保存修改后的数据
+                saveGameData();
+                
+                document.getElementById('status').textContent = '状态: 所有属性已最大化';
+            } catch (e) {
+                document.getElementById('status').textContent = '状态: 最大化属性失败 - ' + e.message;
+            }
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载游戏数据
+            if (loadGameData()) {
+                createAttributeUI();
+            }
+            
+            // 绑定全部最大化按钮事件
+            document.getElementById('maxAllBtn').addEventListener('click', maxAllAttributes);
+        });
+    </script>
+</body>
+</html>
