@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,height=device-height;initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no,minimal-ui">
+    <title>TinyWaste 废土生存 (带金手指版)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        h1 {
+            color: #ff9900;
+            margin-bottom: 30px;
+        }
+        
+        .description {
+            text-align: left;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #ff9900;
+            color: #000;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 5px;
+            font-size: 18px;
+            margin: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        .button:hover {
+            background-color: #ffb340;
+        }
+        
+        .features {
+            text-align: left;
+            margin: 30px 0;
+        }
+        
+        .features h2 {
+            color: #ff9900;
+            margin-bottom: 15px;
+        }
+        
+        .features ul {
+            list-style-type: square;
+            padding-left: 20px;
+        }
+        
+        .features li {
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TinyWaste 废土生存 (带金手指版)</h1>
+        
+        <div class="description">
+            <p>欢迎来到辐射后的废土世界！在这个充满危险的环境中，你需要收集资源、制作工具、探索地图、与敌人战斗，努力生存下去。</p>
+            <p>本版本增加了金手指功能，可以帮助你更轻松地体验游戏内容。</p>
+        </div>
+        
+        <a href="index.html" class="button">开始游戏</a>
+        
+        <div class="features">
+            <h2>金手指功能</h2>
+            <ul>
+                <li>属性修改：随意调整生命、饱食度、水分等属性</li>
+                <li>物品添加：获取任意物品和数量</li>
+                <li>地图功能：解锁所有地点、刷新资源、移除敌人</li>
+                <li>时间控制：加速/减速游戏时间、跳过等待时间</li>
+                <li>战斗辅助：一击必杀模式、无敌模式、自动战斗</li>
+            </ul>
+        </div>
+        
+        <div class="features">
+            <h2>游戏提示</h2>
+            <ul>
+                <li>游戏开始时，先收集基础资源（木头、石头、水）</li>
+                <li>制作基础工具（撬棍、铁镐、斧头）来提高收集效率</li>
+                <li>解锁工作台和箱子以扩展存储空间和制作能力</li>
+                <li>注意保持饱食度和水分，避免饥渴</li>
+                <li>小心辐射，它会降低你的生命上限</li>
+                <li>探索村庄和废墟，与NPC交流获取任务和信息</li>
+                <li>使用金手指按钮（右上角）可以打开金手指功能面板</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>TinyWaste 游戏由 mikiashiki 开发 | 金手指功能增强版</p>
+        </div>
+    </div>
+    
+    <script>
+        // 检测是否直接从文件系统打开
+        if (window.location.protocol === 'file:') {
+            // 提示用户使用本地服务器
+            document.addEventListener('DOMContentLoaded', function() {
+                var container = document.querySelector('.container');
+                var warning = document.createElement('div');
+                warning.style.backgroundColor = '#ff6b6b';
+                warning.style.color = '#fff';
+                warning.style.padding = '10px';
+                warning.style.borderRadius = '5px';
+                warning.style.marginTop = '20px';
+                warning.innerHTML = '<strong>注意：</strong>为了正常加载游戏资源，建议使用本地服务器运行游戏，而不是直接从文件系统打开。';
+                container.appendChild(warning);
+            });
+        }
+    </script>
+</body>
+</html>
