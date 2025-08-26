@@ -194,14 +194,10 @@ function addCheatStyles() {
 }
 
 // 初始化金手指
-$(function() {
-    // 在游戏加载完成后初始化金手指
-    var originalLoader = window.loader;
-    window.loader = function() {
-        originalLoader();
-        setTimeout(function() {
-            createCheatUI();
-            addCheatStyles();
-        }, 2000);
-    };
+$(document).ready(function() {
+    // 等待游戏加载完成后初始化金手指
+    setTimeout(function() {
+        createCheatUI();
+        addCheatStyles();
+    }, 3000);
 });

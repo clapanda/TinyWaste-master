@@ -25,9 +25,10 @@ function loader(){
     loop();
 
     function loop(){
+        var currentFile = LOAD_LIST.shift();
         $.ajax({
             type:'GET',
-            url:"./data/" + LOAD_LIST.shift() + ".min.js",
+            url:"./data/" + currentFile + ".min.js",
             success:function(data){
                 var width = i*9+28;
                 var nextWidth = (i+1)*9+28;
@@ -56,6 +57,38 @@ function loader(){
 		                $("#overlay").fadeOut(1000);
 		            });
 		        }
+            },
+            error: function() {
+                // 如果加载压缩版失败，尝试加载非压缩版
+                console.log("加载 " + currentFile + ".min.js 失败，尝试加载非压缩版");
+                $.ajax({
+                    type:'GET',
+                    url:"./data/" + currentFile + ".js",
+                    success:function(data){
+                        var width = i*9+28;
+                        var nextWidth = (i+1)*9+28;
+                        $("#loadGame div").stop(true);
+                        $("#loadGame div").animate({width:width+"%"}, 500).animate({width:nextWidth>100?100:nextWidth+"%"}, 1000);
+                        
+                        if(LOAD_LIST.length > 0){
+                            i += 1;
+                            setTimeout(loop, 100);
+                        }
+                        else{
+                            $("#loadGame div").stop(true);
+                            $("#loadGame div").animate({width:"100%"}, 1000, function(){
+                                $("#overlay").empty();
+                                BEFORE_GAME.create();
+                                $("#beforeGame").hide();
+                                $("#beforeGame").fadeIn(1000);
+                                $("#overlay").fadeOut(1000);
+                            });
+                        }
+                    },
+                    error: function() {
+                        alert("加载游戏文件失败，请刷新页面重试");
+                    }
+                });
             }
         });
     }
