@@ -4,6 +4,7 @@
 // 全局变量
 var CHEAT_ENABLED = false;
 var CHEAT_LOG_PREFIX = "🎮 金手指:";
+var LOCKED_STATUS = {}; // 存储被锁定的属性
 
 // 在游戏加载完成后初始化金手指
 function initCheat() {
@@ -12,10 +13,36 @@ function initCheat() {
         createCheatUI();
         addCheatStyles();
         setupCheatConsole();
+        installStatusHook();
         CHEAT_ENABLED = true;
         console.log(CHEAT_LOG_PREFIX, "初始化完成 ✅");
     } catch(e) {
         console.error(CHEAT_LOG_PREFIX, "初始化失败", e);
+    }
+}
+
+// 安装状态钩子，拦截属性变化
+function installStatusHook() {
+    try {
+        // 保存原始的caculate函数
+        if (typeof window.originalCaculate === 'undefined') {
+            window.originalCaculate = window.caculate;
+        }
+        
+        // 重写caculate函数，添加锁定检查
+        window.caculate = function(data, name, value) {
+            // 如果是PLAYER_STATUS且属性被锁定，则不进行修改
+            if (data === PLAYER_STATUS && LOCKED_STATUS[name]) {
+                return; // 属性被锁定，忽略变化
+            }
+            
+            // 否则调用原始函数
+            window.originalCaculate(data, name, value);
+        };
+        
+        console.log(CHEAT_LOG_PREFIX, "状态钩子已安装，可以锁定属性值");
+    } catch(e) {
+        console.error(CHEAT_LOG_PREFIX, "安装状态钩子失败", e);
     }
 }
 
@@ -29,26 +56,41 @@ function setupCheatConsole() {
         window.cheat.help = function() {
             console.log(CHEAT_LOG_PREFIX, "🎮 金手指控制台命令 🎮");
             console.log("---------------------------------------");
-            console.log("可用命令：");
+            console.log("基本命令：");
             console.log("  cheat.status()             - 显示金手指状态");
             console.log("  cheat.toggle()             - 开关金手指面板");
+            console.log("  cheat.listAttrs()          - 列出所有可修改的属性");
+            console.log("---------------------------------------");
+            console.log("属性修改命令：");
             console.log("  cheat.set('属性名', 值)     - 设置属性值");
             console.log("  cheat.max('属性名')         - 将属性设为最大值");
-            console.log("  cheat.maxAll()             - 所有属性最大化(不包括辐射)");
-            console.log("  cheat.maxAll(true)         - 所有属性最大化(包括辐射)");
-            console.log("  cheat.listAttrs()          - 列出所有可修改的属性");
+            console.log("  cheat.maxStatus()          - 最大化基础状态属性（生命、饱食、水分等）");
+            console.log("  cheat.maxSpecial()         - 最大化特殊属性（体质、感知、魅力等）");
+            console.log("  cheat.maxAll()             - 同时执行maxStatus和maxSpecial");
+            console.log("---------------------------------------");
+            console.log("属性锁定命令：");
+            console.log("  cheat.lock('属性名')        - 锁定/解锁指定属性，使其不随时间变化");
+            console.log("  cheat.lock('属性名', 值)    - 设置属性值并锁定");
+            console.log("  cheat.lockStatus()         - 最大化并锁定所有基础状态属性");
+            console.log("  cheat.unlockAll()          - 解锁所有属性");
             console.log("---------------------------------------");
             console.log("使用示例：");
             console.log("  cheat.set('life', 100)     - 将生命值设为100");
-            console.log("  cheat.set('hunger', 100)   - 将饱食度设为100");
-            console.log("  cheat.max('energy')        - 将精力值最大化");
+            console.log("  cheat.lock('hunger', 100)  - 将饱食度设为100并锁定");
+            console.log("  cheat.lock('radiation', 0) - 将辐射设为0并锁定");
+            console.log("  cheat.maxStatus()          - 最大化所有基础状态属性");
+            console.log("---------------------------------------");
+            console.log("UI界面功能：");
+            console.log("  - 属性后的🔓/🔒按钮可以锁定/解锁该属性");
+            console.log("  - 锁定后的属性不会随时间变化");
+            console.log("  - 锁定的属性在listAttrs()中会显示🔒标记");
             console.log("---------------------------------------");
             console.log("快捷键：");
             console.log("  Ctrl+Shift+C               - 切换金手指面板");
             console.log("---------------------------------------");
             console.log("注意事项：");
             console.log("  1. 属性名必须用引号括起来，例如 'life'");
-            console.log("  2. 最大化辐射可能导致角色死亡");
+            console.log("  2. 锁定功能通过拦截游戏内属性变化实现");
             console.log("  3. 如果金手指面板不显示，可以使用快捷键或刷新页面");
             console.log("金手指控制台已加载 🎮");
         };
@@ -61,8 +103,15 @@ function setupCheatConsole() {
         
         // 切换金手指面板
         window.cheat.toggle = function() {
-            toggleCheatPanel();
-            console.log("金手指面板已" + ($("#cheatPanel").is(":visible") ? "显示 👁️" : "隐藏 🙈"));
+            var isVisible = $("#cheatPanel").is(":visible");
+            if (isVisible) {
+                $("#cheatPanel").fadeOut(300);
+                console.log(CHEAT_LOG_PREFIX, "面板已隐藏 🙈");
+            } else {
+                $("#cheatPanel").fadeIn(300);
+                updateAllAttributeValues();
+                console.log(CHEAT_LOG_PREFIX, "面板已显示 👁️");
+            }
         };
         
         // 设置属性值
@@ -123,31 +172,50 @@ function setupCheatConsole() {
             console.log(CHEAT_LOG_PREFIX, `已最大化 ${PLAYER_STATUS[attr].name}: ${oldValue} → ${max}`);
         };
         
-        // 所有属性最大化
-        window.cheat.maxAll = function(includeRadiation) {
-            console.log(CHEAT_LOG_PREFIX, "正在最大化所有属性...");
+        // 最大化基础状态属性（生命、饱食、水分、精力、理智）
+        window.cheat.maxStatus = function() {
+            console.log(CHEAT_LOG_PREFIX, "正在最大化基础状态属性...");
             
-            // 基础属性
-            for (var i in STATUS_LIST) {
-                var status = STATUS_LIST[i];
-                // 辐射特殊处理，默认不最大化辐射
-                if (status === 'radiation' && !includeRadiation) {
-                    console.log(CHEAT_LOG_PREFIX, `跳过辐射属性（可能导致死亡）`);
-                    continue;
+            // 需要最大化的基础属性列表
+            var statusToMax = ['life', 'hunger', 'thirst', 'energy', 'san'];
+            
+            // 最大化基础属性
+            for (var i in statusToMax) {
+                var status = statusToMax[i];
+                if (PLAYER_STATUS[status]) {
+                    var max = PLAYER_STATUS[status].max || 100;
+                    modifyAttribute(status, max);
                 }
-                var max = PLAYER_STATUS[status].max || 999;
-                modifyAttribute(status, max);
             }
             
-            // 特殊属性
+            // 将辐射设为0
+            if (PLAYER_STATUS['radiation']) {
+                modifyAttribute('radiation', 0);
+            }
+            
+            console.log(CHEAT_LOG_PREFIX, "基础状态属性已最大化 ✅");
+        };
+        
+        // 最大化特殊属性（体质、感知、魅力、运气、灵巧）
+        window.cheat.maxSpecial = function() {
+            console.log(CHEAT_LOG_PREFIX, "正在最大化特殊属性...");
+            
+            // 最大化特殊属性
             for (var i in SPECIAL_LIST) {
                 var special = SPECIAL_LIST[i];
                 var max = PLAYER_STATUS[special].max || 999;
                 modifyAttribute(special, max);
             }
             
+            console.log(CHEAT_LOG_PREFIX, "特殊属性已最大化 ✅");
+        };
+        
+        // 保留maxAll函数，但简化为同时调用maxStatus和maxSpecial
+        window.cheat.maxAll = function() {
+            console.log(CHEAT_LOG_PREFIX, "正在最大化所有属性...");
+            window.cheat.maxStatus();
+            window.cheat.maxSpecial();
             console.log(CHEAT_LOG_PREFIX, "所有属性已最大化 ✅");
-            console.log(CHEAT_LOG_PREFIX, "提示：如需最大化辐射，请使用 cheat.maxAll(true)");
         };
         
         // 列出所有可修改的属性
@@ -155,14 +223,77 @@ function setupCheatConsole() {
             console.log(CHEAT_LOG_PREFIX, "基础属性:");
             for (var i in STATUS_LIST) {
                 var status = STATUS_LIST[i];
-                console.log(`  ${status}: ${PLAYER_STATUS[status].name} = ${PLAYER_STATUS[status].value}`);
+                var lockStatus = LOCKED_STATUS[status] ? "🔒" : "";
+                console.log(`  ${status}: ${PLAYER_STATUS[status].name} = ${PLAYER_STATUS[status].value} ${lockStatus}`);
             }
             
             console.log(CHEAT_LOG_PREFIX, "特殊属性:");
             for (var i in SPECIAL_LIST) {
                 var special = SPECIAL_LIST[i];
-                console.log(`  ${special}: ${PLAYER_STATUS[special].name} = ${PLAYER_STATUS[special].value}`);
+                var lockStatus = LOCKED_STATUS[special] ? "🔒" : "";
+                console.log(`  ${special}: ${PLAYER_STATUS[special].name} = ${PLAYER_STATUS[special].value} ${lockStatus}`);
             }
+        };
+        
+        // 锁定/解锁属性值
+        window.cheat.lock = function(attr, value) {
+            // 检查参数是否为字符串
+            if (typeof attr !== 'string') {
+                console.error(CHEAT_LOG_PREFIX, "属性名必须是字符串，例如: cheat.lock('life')");
+                console.log(CHEAT_LOG_PREFIX, "可用属性列表:");
+                window.cheat.listAttrs();
+                return;
+            }
+            
+            // 检查属性是否存在
+            if (!PLAYER_STATUS[attr]) {
+                console.error(CHEAT_LOG_PREFIX, `属性 '${attr}' 不存在`);
+                console.log(CHEAT_LOG_PREFIX, "可用属性列表:");
+                window.cheat.listAttrs();
+                return;
+            }
+            
+            // 如果已经锁定，则解锁
+            if (LOCKED_STATUS[attr]) {
+                delete LOCKED_STATUS[attr];
+                console.log(CHEAT_LOG_PREFIX, `已解锁 ${PLAYER_STATUS[attr].name} 属性，恢复正常变化`);
+                return;
+            }
+            
+            // 如果提供了值，则先设置该值
+            if (value !== undefined) {
+                modifyAttribute(attr, value);
+            }
+            
+            // 锁定当前值
+            LOCKED_STATUS[attr] = true;
+            console.log(CHEAT_LOG_PREFIX, `已锁定 ${PLAYER_STATUS[attr].name} 属性，当前值: ${PLAYER_STATUS[attr].value}`);
+        };
+        
+        // 锁定所有基础状态属性
+        window.cheat.lockStatus = function() {
+            console.log(CHEAT_LOG_PREFIX, "正在锁定所有基础状态属性...");
+            
+            // 先最大化基础属性
+            window.cheat.maxStatus();
+            
+            // 锁定基础属性
+            var statusToLock = ['life', 'hunger', 'thirst', 'energy', 'san', 'radiation'];
+            for (var i in statusToLock) {
+                var status = statusToLock[i];
+                if (PLAYER_STATUS[status]) {
+                    LOCKED_STATUS[status] = true;
+                }
+            }
+            
+            console.log(CHEAT_LOG_PREFIX, "所有基础状态属性已锁定 🔒");
+        };
+        
+        // 解锁所有属性
+        window.cheat.unlockAll = function() {
+            console.log(CHEAT_LOG_PREFIX, "正在解锁所有属性...");
+            LOCKED_STATUS = {};
+            console.log(CHEAT_LOG_PREFIX, "所有属性已解锁 ✅");
         };
         
         // 打印帮助信息
@@ -215,15 +346,20 @@ function updateCheatStatus() {
 // 切换金手指面板显示/隐藏
 function toggleCheatPanel() {
     try {
-        if ($("#cheatPanel").is(":visible")) {
-            $("#cheatPanel").fadeOut(300);
-            console.log(CHEAT_LOG_PREFIX, "面板已隐藏 🙈");
+        // 直接调用cheat.toggle方法，保持一致的行为
+        if (typeof window.cheat !== 'undefined' && typeof window.cheat.toggle === 'function') {
+            window.cheat.toggle();
         } else {
-            $("#cheatPanel").fadeIn(300);
-            console.log(CHEAT_LOG_PREFIX, "面板已显示 👁️");
-            
-            // 更新所有属性的当前值
-            updateAllAttributeValues();
+            // 如果cheat对象尚未初始化，则使用默认行为
+            var isVisible = $("#cheatPanel").is(":visible");
+            if (isVisible) {
+                $("#cheatPanel").fadeOut(300);
+                console.log(CHEAT_LOG_PREFIX, "面板已隐藏 🙈");
+            } else {
+                $("#cheatPanel").fadeIn(300);
+                updateAllAttributeValues();
+                console.log(CHEAT_LOG_PREFIX, "面板已显示 👁️");
+            }
         }
     } catch(e) {
         console.error(CHEAT_LOG_PREFIX, "切换面板失败", e);
@@ -248,8 +384,35 @@ function updateAllAttributeValues() {
                 $("#attr_" + special).val(Math.floor(PLAYER_STATUS[special].value));
             }
         }
+        
+        // 更新锁定按钮状态
+        updateLockButtonStatus();
     } catch(e) {
         console.error(CHEAT_LOG_PREFIX, "更新属性值失败", e);
+    }
+}
+
+// 更新锁定按钮状态
+function updateLockButtonStatus() {
+    try {
+        // 更新基础属性的锁定按钮
+        var statusToCheck = ['life', 'hunger', 'thirst', 'energy', 'san', 'radiation'];
+        for (var i in statusToCheck) {
+            var status = statusToCheck[i];
+            var lockBtn = $("#lock_" + status);
+            
+            if (lockBtn.length > 0) {
+                if (LOCKED_STATUS[status]) {
+                    $(lockBtn).text("🔒");
+                    $(lockBtn).addClass("locked");
+                } else {
+                    $(lockBtn).text("🔓");
+                    $(lockBtn).removeClass("locked");
+                }
+            }
+        }
+    } catch(e) {
+        console.error(CHEAT_LOG_PREFIX, "更新锁定按钮状态失败", e);
     }
 }
 
@@ -258,16 +421,44 @@ function createAttributeSection() {
     try {
         var section = newElement("div", "", "cheatSection", "cheatSection", "<h3>属性修改</h3>");
         
-        // 快捷按钮区域
-        var quickButtons = newElement("div", "", "cheatQuickButtons", "cheatQuickButtons", "");
-        
-        // 添加全部最大化按钮
-        var maxAllBtn = newElement("button", "", "", "btn btn-warning", "全部最大化");
-        $(maxAllBtn).click(function() {
-            window.cheat.maxAll();
-            updateAllAttributeValues();
-        });
-        $(quickButtons).append(maxAllBtn);
+            // 快捷按钮区域
+    var quickButtons = newElement("div", "", "cheatQuickButtons", "cheatQuickButtons", "");
+    
+    // 添加基础属性最大化按钮
+    var maxStatusBtn = newElement("button", "", "", "btn btn-primary", "最大化状态");
+    $(maxStatusBtn).click(function() {
+        window.cheat.maxStatus();
+        updateAllAttributeValues();
+    });
+    $(quickButtons).append(maxStatusBtn);
+    
+    // 添加特殊属性最大化按钮
+    var maxSpecialBtn = newElement("button", "", "", "btn btn-success", "最大化特殊属性");
+    $(maxSpecialBtn).click(function() {
+        window.cheat.maxSpecial();
+        updateAllAttributeValues();
+    });
+    $(quickButtons).append(maxSpecialBtn);
+    
+    // 添加锁定状态按钮
+    var lockStatusBtn = newElement("button", "", "", "btn btn-warning", "锁定状态");
+    $(lockStatusBtn).click(function() {
+        window.cheat.lockStatus();
+        updateAllAttributeValues();
+        // 更新锁定按钮状态
+        updateLockButtonStatus();
+    });
+    $(quickButtons).append(lockStatusBtn);
+    
+    // 添加解锁全部按钮
+    var unlockAllBtn = newElement("button", "", "", "btn btn-danger", "解锁全部");
+    $(unlockAllBtn).click(function() {
+        window.cheat.unlockAll();
+        updateAllAttributeValues();
+        // 更新锁定按钮状态
+        updateLockButtonStatus();
+    });
+    $(quickButtons).append(unlockAllBtn);
         
         $(section).append(quickButtons);
         
@@ -330,6 +521,36 @@ function createAttributeRow(attr, name) {
             modifyAttribute(attr, max);
         });
         $(row).append(maxBtn);
+        
+        // 锁定按钮（只为基础属性添加）
+        if ($.inArray(attr, ['life', 'hunger', 'thirst', 'energy', 'san', 'radiation']) !== -1) {
+            var lockBtn = newElement("button", "lock_" + attr, "", "btn btn-xs btn-default lockBtn", "🔓");
+            
+            // 设置初始状态
+            if (LOCKED_STATUS[attr]) {
+                $(lockBtn).text("🔒");
+                $(lockBtn).addClass("locked");
+            }
+            
+            // 绑定锁定/解锁事件
+            $(lockBtn).click(function() {
+                if (LOCKED_STATUS[attr]) {
+                    // 解锁
+                    delete LOCKED_STATUS[attr];
+                    $(this).text("🔓");
+                    $(this).removeClass("locked");
+                    console.log(CHEAT_LOG_PREFIX, `已解锁 ${PLAYER_STATUS[attr].name} 属性`);
+                } else {
+                    // 锁定
+                    LOCKED_STATUS[attr] = true;
+                    $(this).text("🔒");
+                    $(this).addClass("locked");
+                    console.log(CHEAT_LOG_PREFIX, `已锁定 ${PLAYER_STATUS[attr].name} 属性`);
+                }
+            });
+            
+            $(row).append(lockBtn);
+        }
         
         return row;
     } catch(e) {
@@ -506,14 +727,24 @@ function addCheatStyles() {
             flex: 1;
         }
         
-        .cheatAttributeRow input {
-            width: 60px;
-            background-color: #333;
-            color: #fff;
-            border: 1px solid #555;
-            padding: 2px 5px;
-            margin-right: 5px;
-        }
+            .cheatAttributeRow input {
+        width: 60px;
+        background-color: #333;
+        color: #fff;
+        border: 1px solid #555;
+        padding: 2px 5px;
+        margin-right: 5px;
+    }
+    
+    .lockBtn {
+        width: 30px;
+        margin-left: 2px !important;
+    }
+    
+    .lockBtn.locked {
+        background-color: #ff9900;
+        color: #000;
+    }
         
         .comingSoon {
             color: #999;
