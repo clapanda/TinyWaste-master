@@ -27,13 +27,29 @@ function setupCheatConsole() {
         
         // 显示帮助信息
         window.cheat.help = function() {
-            console.log(CHEAT_LOG_PREFIX, "可用命令：");
-            console.log("  cheat.status() - 显示金手指状态");
-            console.log("  cheat.toggle() - 开关金手指面板");
-            console.log("  cheat.set(属性名, 值) - 设置属性值");
-            console.log("  cheat.max(属性名) - 将属性设为最大值");
-            console.log("  cheat.maxAll() - 所有属性最大化");
-            console.log("  cheat.listAttrs() - 列出所有可修改的属性");
+            console.log(CHEAT_LOG_PREFIX, "🎮 金手指控制台命令 🎮");
+            console.log("---------------------------------------");
+            console.log("可用命令：");
+            console.log("  cheat.status()             - 显示金手指状态");
+            console.log("  cheat.toggle()             - 开关金手指面板");
+            console.log("  cheat.set('属性名', 值)     - 设置属性值");
+            console.log("  cheat.max('属性名')         - 将属性设为最大值");
+            console.log("  cheat.maxAll()             - 所有属性最大化(不包括辐射)");
+            console.log("  cheat.maxAll(true)         - 所有属性最大化(包括辐射)");
+            console.log("  cheat.listAttrs()          - 列出所有可修改的属性");
+            console.log("---------------------------------------");
+            console.log("使用示例：");
+            console.log("  cheat.set('life', 100)     - 将生命值设为100");
+            console.log("  cheat.set('hunger', 100)   - 将饱食度设为100");
+            console.log("  cheat.max('energy')        - 将精力值最大化");
+            console.log("---------------------------------------");
+            console.log("快捷键：");
+            console.log("  Ctrl+Shift+C               - 切换金手指面板");
+            console.log("---------------------------------------");
+            console.log("注意事项：");
+            console.log("  1. 属性名必须用引号括起来，例如 'life'");
+            console.log("  2. 最大化辐射可能导致角色死亡");
+            console.log("  3. 如果金手指面板不显示，可以使用快捷键或刷新页面");
             console.log("金手指控制台已加载 🎮");
         };
         
@@ -51,8 +67,25 @@ function setupCheatConsole() {
         
         // 设置属性值
         window.cheat.set = function(attr, value) {
+            // 检查参数是否为字符串
+            if (typeof attr !== 'string') {
+                console.error(CHEAT_LOG_PREFIX, "属性名必须是字符串，例如: cheat.set('life', 100)");
+                console.log(CHEAT_LOG_PREFIX, "可用属性列表:");
+                window.cheat.listAttrs();
+                return;
+            }
+            
+            // 检查属性是否存在
             if (!PLAYER_STATUS[attr]) {
-                console.error(CHEAT_LOG_PREFIX, "属性不存在:", attr);
+                console.error(CHEAT_LOG_PREFIX, `属性 '${attr}' 不存在`);
+                console.log(CHEAT_LOG_PREFIX, "可用属性列表:");
+                window.cheat.listAttrs();
+                return;
+            }
+            
+            // 检查值是否为数字
+            if (isNaN(value)) {
+                console.error(CHEAT_LOG_PREFIX, "属性值必须是数字");
                 return;
             }
             
@@ -63,9 +96,25 @@ function setupCheatConsole() {
         
         // 将属性设为最大值
         window.cheat.max = function(attr) {
-            if (!PLAYER_STATUS[attr]) {
-                console.error(CHEAT_LOG_PREFIX, "属性不存在:", attr);
+            // 检查参数是否为字符串
+            if (typeof attr !== 'string') {
+                console.error(CHEAT_LOG_PREFIX, "属性名必须是字符串，例如: cheat.max('life')");
+                console.log(CHEAT_LOG_PREFIX, "可用属性列表:");
+                window.cheat.listAttrs();
                 return;
+            }
+            
+            // 检查属性是否存在
+            if (!PLAYER_STATUS[attr]) {
+                console.error(CHEAT_LOG_PREFIX, `属性 '${attr}' 不存在`);
+                console.log(CHEAT_LOG_PREFIX, "可用属性列表:");
+                window.cheat.listAttrs();
+                return;
+            }
+            
+            // 辐射特殊处理
+            if (attr === 'radiation') {
+                console.warn(CHEAT_LOG_PREFIX, "警告：最大化辐射可能导致角色死亡！");
             }
             
             var max = PLAYER_STATUS[attr].max || 999;
@@ -75,12 +124,17 @@ function setupCheatConsole() {
         };
         
         // 所有属性最大化
-        window.cheat.maxAll = function() {
+        window.cheat.maxAll = function(includeRadiation) {
             console.log(CHEAT_LOG_PREFIX, "正在最大化所有属性...");
             
             // 基础属性
             for (var i in STATUS_LIST) {
                 var status = STATUS_LIST[i];
+                // 辐射特殊处理，默认不最大化辐射
+                if (status === 'radiation' && !includeRadiation) {
+                    console.log(CHEAT_LOG_PREFIX, `跳过辐射属性（可能导致死亡）`);
+                    continue;
+                }
                 var max = PLAYER_STATUS[status].max || 999;
                 modifyAttribute(status, max);
             }
@@ -93,6 +147,7 @@ function setupCheatConsole() {
             }
             
             console.log(CHEAT_LOG_PREFIX, "所有属性已最大化 ✅");
+            console.log(CHEAT_LOG_PREFIX, "提示：如需最大化辐射，请使用 cheat.maxAll(true)");
         };
         
         // 列出所有可修改的属性
@@ -491,21 +546,44 @@ function addCheatStyles() {
 // 在页面加载完成后初始化金手指
 $(document).ready(function() {
     console.log(CHEAT_LOG_PREFIX, "等待游戏加载...");
-    // 等待游戏加载完成后初始化金手指
-    setTimeout(function() {
-        // 检查游戏是否已加载
+    
+    // 定期检查游戏是否已加载
+    var checkInterval = setInterval(function() {
         if (typeof PLAYER_STATUS !== "undefined" && typeof STATUS_LIST !== "undefined") {
+            console.log(CHEAT_LOG_PREFIX, "游戏已加载，初始化金手指...");
             initCheat();
-        } else {
-            console.log(CHEAT_LOG_PREFIX, "游戏尚未加载完成，再次等待...");
-            // 再等待一段时间
-            setTimeout(function() {
-                if (typeof PLAYER_STATUS !== "undefined" && typeof STATUS_LIST !== "undefined") {
-                    initCheat();
-                } else {
-                    console.error(CHEAT_LOG_PREFIX, "游戏加载超时，金手指初始化失败");
-                }
-            }, 5000);
+            clearInterval(checkInterval);
         }
-    }, 3000);
+    }, 1000);
+    
+    // 监听游戏状态变化
+    $(document).on('click', '#startBtn', function() {
+        console.log(CHEAT_LOG_PREFIX, "检测到游戏开始，确保金手指可用...");
+        setTimeout(function() {
+            // 如果金手指按钮不存在，重新初始化
+            if ($("#cheatEmojiBtn").length === 0) {
+                console.log(CHEAT_LOG_PREFIX, "金手指按钮不存在，重新初始化...");
+                initCheat();
+            }
+        }, 2000);
+    });
+    
+    // 添加全局快捷键 (Ctrl+Shift+C) 来切换金手指面板
+    $(document).keydown(function(e) {
+        // Ctrl+Shift+C
+        if (e.ctrlKey && e.shiftKey && e.which === 67) {
+            console.log(CHEAT_LOG_PREFIX, "检测到快捷键，切换金手指面板");
+            if (typeof window.cheat !== "undefined") {
+                window.cheat.toggle();
+            } else if (CHEAT_ENABLED) {
+                toggleCheatPanel();
+            } else {
+                console.log(CHEAT_LOG_PREFIX, "金手指未初始化，尝试初始化...");
+                initCheat();
+                setTimeout(function() {
+                    toggleCheatPanel();
+                }, 500);
+            }
+        }
+    });
 });
