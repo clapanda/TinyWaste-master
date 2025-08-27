@@ -31,19 +31,44 @@ function installStatusHook() {
         
         // 重写caculate函数，添加锁定检查
         window.caculate = function(data, name, value) {
-            // 只有当LOCKED_STATUS不为空（有属性被锁定）时才进行检查
-            if (Object.keys(LOCKED_STATUS).length > 0) {
-                // 如果是PLAYER_STATUS且属性被锁定，则不进行修改
-                if (data === PLAYER_STATUS && LOCKED_STATUS[name]) {
-                    return; // 属性被锁定，忽略变化
-                }
+            // 检查是否是PLAYER_STATUS且属性被锁定
+            if (data === PLAYER_STATUS && LOCKED_STATUS[name]) {
+                console.log(CHEAT_LOG_PREFIX, `阻止属性 ${name} 变化，保持锁定值`);
+                return; // 属性被锁定，忽略变化
             }
             
             // 否则调用原始函数
             window.originalCaculate(data, name, value);
         };
         
-        console.log(CHEAT_LOG_PREFIX, "状态钩子已安装，但只在有属性被锁定时生效");
+        // 添加定时器监控，确保锁定的属性不会变化
+        if (typeof window.lockStatusInterval === 'undefined') {
+            window.lockStatusInterval = setInterval(function() {
+                // 检查所有锁定的属性
+                for (var attr in LOCKED_STATUS) {
+                    if (LOCKED_STATUS[attr] && PLAYER_STATUS[attr]) {
+                        var currentValue = PLAYER_STATUS[attr].value;
+                        var targetValue;
+                        
+                        // 对于辐射，锁定值为0，其他属性锁定为最大值
+                        if (attr === 'radiation') {
+                            targetValue = 0;
+                        } else {
+                            targetValue = PLAYER_STATUS[attr].max || 100;
+                        }
+                        
+                        // 如果当前值不等于目标值，强制设置回来
+                        if (currentValue !== targetValue) {
+                            console.log(CHEAT_LOG_PREFIX, `强制恢复锁定属性 ${attr} 的值: ${currentValue} → ${targetValue}`);
+                            PLAYER_STATUS[attr].value = targetValue;
+                            updateStatus(attr);
+                        }
+                    }
+                }
+            }, 1000); // 每秒检查一次
+        }
+        
+        console.log(CHEAT_LOG_PREFIX, "状态钩子已安装，锁定功能已加强");
     } catch(e) {
         console.error(CHEAT_LOG_PREFIX, "安装状态钩子失败", e);
     }
@@ -311,6 +336,13 @@ function setupCheatConsole() {
             // 清空锁定状态
             LOCKED_STATUS = {};
             
+            // 清除锁定状态监控定时器
+            if (typeof window.lockStatusInterval !== 'undefined') {
+                clearInterval(window.lockStatusInterval);
+                window.lockStatusInterval = undefined;
+                console.log(CHEAT_LOG_PREFIX, "已清除锁定状态监控定时器");
+            }
+            
             // 恢复原始的caculate函数，确保游戏正常运行
             if (typeof window.originalCaculate !== 'undefined') {
                 window.caculate = window.originalCaculate;
@@ -479,49 +511,44 @@ function createAttributeSection() {
     try {
         var section = newElement("div", "", "cheatSection", "cheatSection", "<h3>属性修改</h3>");
         
-            // 快捷按钮区域
-    var quickButtons = newElement("div", "", "cheatQuickButtons", "cheatQuickButtons", "");
-    
-    // 添加基础属性最大化按钮
-    var maxStatusBtn = newElement("button", "", "", "btn btn-primary", "最大化状态");
-    $(maxStatusBtn).click(function() {
-        window.cheat.maxStatus();
-        updateAllAttributeValues();
-    });
-    $(quickButtons).append(maxStatusBtn);
-    
-    // 添加特殊属性最大化按钮
-    var maxSpecialBtn = newElement("button", "", "", "btn btn-success", "最大化特殊属性");
-    $(maxSpecialBtn).click(function() {
-        window.cheat.maxSpecial();
-        updateAllAttributeValues();
-    });
-    $(quickButtons).append(maxSpecialBtn);
-    
-    // 添加锁定状态按钮
-    var lockStatusBtn = newElement("button", "", "", "btn btn-warning", "锁定状态");
-    $(lockStatusBtn).click(function() {
-        window.cheat.lockStatus();
-        updateAllAttributeValues();
-        // 更新锁定按钮状态
-        updateLockButtonStatus();
-    });
-    $(quickButtons).append(lockStatusBtn);
-    
-    // 添加解锁全部按钮
-    var unlockAllBtn = newElement("button", "", "", "btn btn-danger", "解锁全部");
-    $(unlockAllBtn).click(function() {
-        window.cheat.unlockAll();
-        updateAllAttributeValues();
-        // 更新锁定按钮状态
-        updateLockButtonStatus();
-    });
-    $(quickButtons).append(unlockAllBtn);
+        // 基础属性操作区域
+        var basicSection = newElement("div", "", "", "cheatSubSection", "");
         
-        $(section).append(quickButtons);
+        // 添加基础属性标题和快捷按钮
+        var basicHeader = newElement("div", "", "", "cheatSectionHeader", "");
+        $(basicHeader).html("<h4 style='display:inline-block;margin-right:10px;'>基础属性</h4>");
         
-        // 基础属性修改
-        var basicSection = newElement("div", "", "", "cheatSubSection", "<h4>基础属性</h4>");
+        // 添加基础属性最大化按钮
+        var maxStatusBtn = newElement("button", "", "", "btn btn-primary btn-sm", "最大化状态");
+        $(maxStatusBtn).click(function() {
+            window.cheat.maxStatus();
+            updateAllAttributeValues();
+        });
+        $(basicHeader).append(maxStatusBtn);
+        
+        // 添加锁定状态按钮
+        var lockStatusBtn = newElement("button", "", "", "btn btn-warning btn-sm", "锁定状态");
+        $(lockStatusBtn).click(function() {
+            window.cheat.lockStatus();
+            updateAllAttributeValues();
+            // 更新锁定按钮状态
+            updateLockButtonStatus();
+        });
+        $(basicHeader).append(lockStatusBtn);
+        
+        // 添加解锁全部按钮
+        var unlockAllBtn = newElement("button", "", "", "btn btn-danger btn-sm", "解锁全部");
+        $(unlockAllBtn).click(function() {
+            window.cheat.unlockAll();
+            updateAllAttributeValues();
+            // 更新锁定按钮状态
+            updateLockButtonStatus();
+        });
+        $(basicHeader).append(unlockAllBtn);
+        
+        $(basicSection).append(basicHeader);
+        
+        // 基础属性行
         for (var i in STATUS_LIST) {
             var status = STATUS_LIST[i];
             var row = createAttributeRow(status, PLAYER_STATUS[status].name);
@@ -530,7 +557,23 @@ function createAttributeSection() {
         $(section).append(basicSection);
         
         // 特殊属性修改
-        var specialSection = newElement("div", "", "", "cheatSubSection", "<h4>特殊属性</h4>");
+        var specialSection = newElement("div", "", "", "cheatSubSection", "");
+        
+        // 添加特殊属性标题和按钮
+        var specialHeader = newElement("div", "", "", "cheatSectionHeader", "");
+        $(specialHeader).html("<h4 style='display:inline-block;margin-right:10px;'>特殊属性</h4>");
+        
+        // 添加特殊属性最大化按钮
+        var maxSpecialBtn = newElement("button", "", "", "btn btn-success btn-sm", "最大化特殊属性");
+        $(maxSpecialBtn).click(function() {
+            window.cheat.maxSpecial();
+            updateAllAttributeValues();
+        });
+        $(specialHeader).append(maxSpecialBtn);
+        
+        $(specialSection).append(specialHeader);
+        
+        // 特殊属性行
         for (var i in SPECIAL_LIST) {
             var special = SPECIAL_LIST[i];
             var row = createAttributeRow(special, PLAYER_STATUS[special].name);
@@ -571,17 +614,24 @@ function createAttributeRow(attr, name) {
         
         $(row).append(input);
         
-        // 最大值按钮
-        var maxBtn = newElement("button", "", "", "btn btn-xs btn-default", "最大");
-        $(maxBtn).click(function() {
-            var max = PLAYER_STATUS[attr].max || 999;
-            $("#attr_" + attr).val(max);
-            modifyAttribute(attr, max);
-        });
-        $(row).append(maxBtn);
+        // 判断是基础属性还是特殊属性
+        var isBasicStatus = $.inArray(attr, ['life', 'hunger', 'thirst', 'energy', 'san', 'radiation']) !== -1;
         
-        // 锁定按钮（只为基础属性添加）
-        if ($.inArray(attr, ['life', 'hunger', 'thirst', 'energy', 'san', 'radiation']) !== -1) {
+        if (isBasicStatus) {
+            // 基础属性使用"最大"按钮
+            var maxBtn = newElement("button", "", "", "btn btn-xs btn-default", "最大");
+            $(maxBtn).click(function() {
+                var max = PLAYER_STATUS[attr].max || 100;
+                // 辐射特殊处理
+                if (attr === 'radiation') {
+                    max = 0;
+                }
+                $("#attr_" + attr).val(max);
+                modifyAttribute(attr, max);
+            });
+            $(row).append(maxBtn);
+            
+            // 锁定按钮（只为基础属性添加）
             var lockBtn = newElement("button", "lock_" + attr, "", "btn btn-xs btn-default lockBtn", "🔓");
             
             // 设置初始状态
@@ -608,6 +658,24 @@ function createAttributeRow(attr, name) {
             });
             
             $(row).append(lockBtn);
+        } else {
+            // 特殊属性使用"+10"和"最大"按钮
+            var plus10Btn = newElement("button", "", "", "btn btn-xs btn-info", "+10");
+            $(plus10Btn).click(function() {
+                var currentValue = parseInt($("#attr_" + attr).val()) || 0;
+                var newValue = currentValue + 10;
+                $("#attr_" + attr).val(newValue);
+                modifyAttribute(attr, newValue);
+            });
+            $(row).append(plus10Btn);
+            
+            var maxBtn = newElement("button", "", "", "btn btn-xs btn-default", "最大");
+            $(maxBtn).click(function() {
+                var max = PLAYER_STATUS[attr].max || 999;
+                $("#attr_" + attr).val(max);
+                modifyAttribute(attr, max);
+            });
+            $(row).append(maxBtn);
         }
         
         return row;
@@ -748,6 +816,20 @@ function addCheatStyles() {
             margin-bottom: 5px;
         }
         
+        .cheatSectionHeader {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .cheatSectionHeader button {
+            margin-left: 5px;
+            padding: 2px 5px;
+            font-size: 11px;
+        }
+        
         .cheatQuickButtons {
             display: flex;
             justify-content: center;
@@ -759,10 +841,11 @@ function addCheatStyles() {
         }
         
         .cheatSubSection {
-            margin-bottom: 10px;
-            padding: 5px;
+            margin-bottom: 15px;
+            padding: 8px;
             background-color: rgba(255, 255, 255, 0.05);
             border-radius: 3px;
+            border-left: 3px solid rgba(255, 204, 0, 0.5);
         }
         
         .cheatSection button {
