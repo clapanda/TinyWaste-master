@@ -59,7 +59,7 @@ function installStatusHook() {
                         
                         // 如果当前值不等于目标值，强制设置回来
                         if (currentValue !== targetValue) {
-                            console.log(CHEAT_LOG_PREFIX, `强制恢复锁定属性 ${attr} 的值: ${currentValue} → ${targetValue}`);
+                            // 静默恢复锁定的属性值，不输出日志避免刷屏
                             PLAYER_STATUS[attr].value = targetValue;
                             updateStatus(attr);
                         }
