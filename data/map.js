@@ -255,7 +255,7 @@ var MAP_DATA_INIT = {
 				name:'矿石',
 				get:{ore:5},
 				refresh:3600,
-				max:50,
+				max:500,
 				value:20,
 				energy:5,
 				require:{pickaxe:1}
