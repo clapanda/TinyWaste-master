@@ -106,11 +106,23 @@ function setupCheatConsole() {
         
         // 切换金手指面板
         window.cheat.toggle = function() {
+            // 检查面板是否存在，如果不存在则重新创建
+            if ($("#cheatPanel").length === 0) {
+                console.log(CHEAT_LOG_PREFIX, "面板不存在，重新创建...");
+                createCheatUI();
+            }
+            
             var isVisible = $("#cheatPanel").is(":visible");
             if (isVisible) {
                 $("#cheatPanel").fadeOut(300);
                 console.log(CHEAT_LOG_PREFIX, "面板已隐藏 🙈");
             } else {
+                // 确保面板在最上层
+                $("#cheatPanel").css("z-index", "9999999");
+                // 确保面板附加到body
+                if ($("#cheatPanel").parent().prop("tagName") !== "BODY") {
+                    $("body").append($("#cheatPanel"));
+                }
                 $("#cheatPanel").fadeIn(300);
                 updateAllAttributeValues();
                 console.log(CHEAT_LOG_PREFIX, "面板已显示 👁️");
@@ -327,13 +339,17 @@ function setupCheatConsole() {
 // 金手指UI创建函数
 function createCheatUI() {
     try {
+        // 移除可能存在的旧UI元素
+        $("#cheatEmojiBtn").remove();
+        $("#cheatPanel").remove();
+        
         // 创建emoji按钮（半透明）
         var emojiBtn = newElement("div", "cheatEmojiBtn", "", "cheatEmojiBtn", "🎮");
-        $("#background").append(emojiBtn);
+        $("body").append(emojiBtn); // 直接附加到body，确保在最上层
         
         // 创建金手指面板
         var cheatPanel = newElement("div", "cheatPanel", "", "cheatPanel", "");
-        $("#background").append(cheatPanel);
+        $("body").append(cheatPanel); // 直接附加到body，确保在最上层
         $(cheatPanel).hide();
         
         // 创建状态指示器
@@ -350,7 +366,11 @@ function createCheatUI() {
         // 绑定事件
         $("#cheatEmojiBtn").click(toggleCheatPanel);
         
-        console.log(CHEAT_LOG_PREFIX, "UI创建完成");
+        // 确保按钮和面板在最上层
+        $("#cheatEmojiBtn").css("z-index", "9999999");
+        $("#cheatPanel").css("z-index", "9999999");
+        
+        console.log(CHEAT_LOG_PREFIX, "UI创建完成，已附加到body最上层");
     } catch(e) {
         console.error(CHEAT_LOG_PREFIX, "UI创建失败", e);
     }
@@ -366,16 +386,34 @@ function updateCheatStatus() {
 // 切换金手指面板显示/隐藏
 function toggleCheatPanel() {
     try {
+        // 检查金手指按钮是否存在，如果不存在则重新初始化
+        if ($("#cheatEmojiBtn").length === 0) {
+            console.log(CHEAT_LOG_PREFIX, "金手指按钮不存在，重新初始化...");
+            createCheatUI();
+        }
+        
         // 直接调用cheat.toggle方法，保持一致的行为
         if (typeof window.cheat !== 'undefined' && typeof window.cheat.toggle === 'function') {
             window.cheat.toggle();
         } else {
             // 如果cheat对象尚未初始化，则使用默认行为
+            // 检查面板是否存在，如果不存在则重新创建
+            if ($("#cheatPanel").length === 0) {
+                console.log(CHEAT_LOG_PREFIX, "面板不存在，重新创建...");
+                createCheatUI();
+            }
+            
             var isVisible = $("#cheatPanel").is(":visible");
             if (isVisible) {
                 $("#cheatPanel").fadeOut(300);
                 console.log(CHEAT_LOG_PREFIX, "面板已隐藏 🙈");
             } else {
+                // 确保面板在最上层
+                $("#cheatPanel").css("z-index", "9999999");
+                // 确保面板附加到body
+                if ($("#cheatPanel").parent().prop("tagName") !== "BODY") {
+                    $("body").append($("#cheatPanel"));
+                }
                 $("#cheatPanel").fadeIn(300);
                 updateAllAttributeValues();
                 console.log(CHEAT_LOG_PREFIX, "面板已显示 👁️");
@@ -803,16 +841,72 @@ $(document).ready(function() {
         }
     }, 1000);
     
-    // 监听游戏状态变化
+    // 监听游戏状态变化 - 关键修改点
     $(document).on('click', '#startBtn', function() {
         console.log(CHEAT_LOG_PREFIX, "检测到游戏开始，确保金手指可用...");
+        // 先隐藏面板，避免在角色创建过程中干扰
+        if ($("#cheatPanel").is(":visible")) {
+            $("#cheatPanel").hide();
+        }
+    });
+    
+    // 监听确认角色按钮点击
+    $(document).on('click', '.modal-footer .btn-primary, .modal-footer .btn-success', function() {
+        console.log(CHEAT_LOG_PREFIX, "检测到确认按钮点击，准备重新初始化金手指...");
+        
+        // 延迟执行，确保在游戏界面加载后再初始化
         setTimeout(function() {
-            // 如果金手指按钮不存在，重新初始化
-            if ($("#cheatEmojiBtn").length === 0) {
-                console.log(CHEAT_LOG_PREFIX, "金手指按钮不存在，重新初始化...");
-                initCheat();
-            }
+            console.log(CHEAT_LOG_PREFIX, "游戏界面已加载，重新初始化金手指...");
+            
+            // 移除可能存在的旧UI元素
+            $("#cheatEmojiBtn").remove();
+            $("#cheatPanel").remove();
+            
+            // 重新初始化
+            initCheat();
+            
+            // 确保面板初始状态为隐藏
+            $("#cheatPanel").hide();
+            
+            // 将金手指按钮和面板移动到body最后，确保在最上层
+            $("body").append($("#cheatEmojiBtn"));
+            $("body").append($("#cheatPanel"));
+            
+            console.log(CHEAT_LOG_PREFIX, "金手指已重新初始化并移至顶层");
         }, 2000);
+    });
+    
+    // 监听游戏内所有可能的界面变化
+    var observeDOM = (function(){
+        var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+        
+        return function(obj, callback){
+            if(!obj || obj.nodeType !== 1) return; 
+            
+            if(MutationObserver){
+                var mutationObserver = new MutationObserver(callback);
+                mutationObserver.observe(obj, {childList: true, subtree: true});
+                return mutationObserver;
+            } else if(window.addEventListener){
+                obj.addEventListener('DOMNodeInserted', callback, false);
+                obj.addEventListener('DOMNodeRemoved', callback, false);
+            }
+        };
+    })();
+    
+    // 监听body变化，确保金手指始终可用
+    observeDOM(document.body, function(mutations) {
+        // 检查金手指按钮是否存在
+        if ($("#cheatEmojiBtn").length === 0 && typeof PLAYER_STATUS !== "undefined") {
+            console.log(CHEAT_LOG_PREFIX, "检测到DOM变化，金手指按钮丢失，重新初始化...");
+            
+            // 重新初始化
+            initCheat();
+            
+            // 将金手指按钮和面板移动到body最后，确保在最上层
+            $("body").append($("#cheatEmojiBtn"));
+            $("body").append($("#cheatPanel"));
+        }
     });
     
     // 添加全局快捷键 (Alt+X) 来切换金手指面板
@@ -821,6 +915,17 @@ $(document).ready(function() {
         if (e.altKey && e.which === 88) {
             e.preventDefault(); // 阻止默认行为
             console.log(CHEAT_LOG_PREFIX, "检测到快捷键Alt+X，切换金手指面板");
+            
+            // 检查金手指按钮是否存在，如果不存在则重新初始化
+            if ($("#cheatEmojiBtn").length === 0) {
+                console.log(CHEAT_LOG_PREFIX, "金手指按钮不存在，重新初始化...");
+                initCheat();
+                
+                // 将金手指按钮和面板移动到body最后，确保在最上层
+                $("body").append($("#cheatEmojiBtn"));
+                $("body").append($("#cheatPanel"));
+            }
+            
             if (typeof window.cheat !== "undefined") {
                 window.cheat.toggle();
             } else if (CHEAT_ENABLED) {
