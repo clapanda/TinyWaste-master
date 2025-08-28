@@ -1,0 +1,29 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 构建输出 (可选：如果您想要版本控制minified文件，可以注释掉下一行)
+# data/*.min.js
+
+# 开发工具
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+
+# 日志文件
+*.log
+
+# 测试输出
+coverage/
+

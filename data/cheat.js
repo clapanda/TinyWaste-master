@@ -5,6 +5,8 @@
 var CHEAT_ENABLED = false;
 var CHEAT_LOG_PREFIX = "🎮 金手指:";
 var LOCKED_STATUS = {}; // 存储被锁定的属性
+var WHITE_MODE_ENABLED = false; // 白嫖模式开关
+var ORIGINAL_BAG_CAP = 12; // 原始背包容量
 
 // 在游戏加载完成后初始化金手指
 function initCheat() {
@@ -14,6 +16,7 @@ function initCheat() {
         addCheatStyles();
         setupCheatConsole();
         installStatusHook();
+        installCraftingHook();
         CHEAT_ENABLED = true;
         console.log(CHEAT_LOG_PREFIX, "初始化完成 ✅");
     } catch(e) {
@@ -74,6 +77,104 @@ function installStatusHook() {
     }
 }
 
+// 安装物品制作钩子，实现白嫖模式
+function installCraftingHook() {
+    try {
+        // 保存原始的costMaterialFunc函数
+        if (typeof window.originalCostMaterialFunc === 'undefined') {
+            window.originalCostMaterialFunc = window.costMaterialFunc;
+        }
+
+        // 重写costMaterialFunc函数，添加白嫖模式
+        window.costMaterialFunc = function(cost, item, amount) {
+            if (WHITE_MODE_ENABLED) {
+                console.log(CHEAT_LOG_PREFIX, "白嫖模式: 跳过材料扣除");
+                // 白嫖模式：跳过材料扣除，直接执行后续逻辑
+                if (TOOL_DATA[item].only) {
+                    if (TOOL_DATA[item].upgrade != undefined) {
+                        eval(TOOL_DATA[item].upgrade);
+                    }
+                    if (TOOL_DATA[item].eternal == undefined) {
+                        delete TOOL_DATA[item].show;
+                        TOOL_FINISHED.push(item);
+                    }
+                    var newObj = new workbenchObj(mode);
+                    newObj.create();
+                }
+                return;
+            }
+
+            // 否则调用原始函数
+            window.originalCostMaterialFunc(cost, item, amount);
+        };
+
+        console.log(CHEAT_LOG_PREFIX, "物品制作钩子已安装，白嫖模式可用");
+    } catch(e) {
+        console.error(CHEAT_LOG_PREFIX, "安装物品制作钩子失败", e);
+    }
+}
+
+// 白嫖模式切换
+function toggleWhiteMode() {
+    WHITE_MODE_ENABLED = !WHITE_MODE_ENABLED;
+    var status = WHITE_MODE_ENABLED ? "开启" : "关闭";
+    console.log(CHEAT_LOG_PREFIX, "白嫖模式已" + status);
+    showMsg("白嫖模式已" + status);
+
+    // 更新按钮状态
+    $("#whiteModeBtn").text(WHITE_MODE_ENABLED ? "关闭白嫖" : "开启白嫖");
+
+    // 重新安装钩子确保生效
+    installCraftingHook();
+}
+
+// 背包扩容功能
+function expandInventory() {
+    try {
+        // 保存原始容量（如果还没有保存过）
+        if (typeof ORIGINAL_BAG_CAP === 'undefined' || ORIGINAL_BAG_CAP === null) {
+            ORIGINAL_BAG_CAP = BAG_CAP;
+        }
+
+        // 将背包容量设置为999
+        BAG_CAP = 999;
+        console.log(CHEAT_LOG_PREFIX, "背包容量已扩容至999");
+        showMsg("背包容量已扩容至999");
+    } catch(e) {
+        console.error(CHEAT_LOG_PREFIX, "背包扩容失败", e);
+    }
+}
+
+// 恢复原始背包容量
+function restoreInventory() {
+    try {
+        if (ORIGINAL_BAG_CAP) {
+            BAG_CAP = ORIGINAL_BAG_CAP;
+            console.log(CHEAT_LOG_PREFIX, "背包容量已恢复至" + ORIGINAL_BAG_CAP);
+            showMsg("背包容量已恢复至" + ORIGINAL_BAG_CAP);
+        }
+    } catch(e) {
+        console.error(CHEAT_LOG_PREFIX, "恢复背包容量失败", e);
+    }
+}
+
+// 移除所有状态
+function removeAllBuffs() {
+    try {
+        var removedCount = 0;
+        for (var buff in PLAYER_STATUS.buff) {
+            if (PLAYER_STATUS.buff.hasOwnProperty(buff)) {
+                removeBuff(buff);
+                removedCount++;
+            }
+        }
+        console.log(CHEAT_LOG_PREFIX, "已移除" + removedCount + "个状态");
+        showMsg("已移除" + removedCount + "个状态");
+    } catch(e) {
+        console.error(CHEAT_LOG_PREFIX, "移除状态失败", e);
+    }
+}
+
 // 设置控制台命令
 function setupCheatConsole() {
     try {
@@ -102,16 +203,28 @@ function setupCheatConsole() {
             console.log("  cheat.lockStatus()         - 最大化并锁定所有基础状态属性");
             console.log("  cheat.unlockAll()          - 解锁所有属性");
             console.log("---------------------------------------");
+            console.log("物品操作命令：");
+            console.log("  cheat.whiteMode()          - 切换白嫖模式（制作物品不消耗材料）");
+            console.log("  cheat.expandBag()          - 将背包容量扩容至999");
+            console.log("  cheat.restoreBag()         - 恢复原始背包容量");
+            console.log("---------------------------------------");
+            console.log("状态操作命令：");
+            console.log("  cheat.removeAllBuffs()     - 移除当前所有附加状态");
+            console.log("---------------------------------------");
             console.log("使用示例：");
             console.log("  cheat.set('life', 100)     - 将生命值设为100");
             console.log("  cheat.lock('hunger', 100)  - 将饱食度设为100并锁定");
-            console.log("  cheat.lock('radiation', 0) - 将辐射设为0并锁定");
-            console.log("  cheat.maxStatus()          - 最大化所有基础状态属性");
+            console.log("  cheat.whiteMode()          - 开启/关闭白嫖模式");
+            console.log("  cheat.expandBag()          - 扩容背包至999");
+            console.log("  cheat.removeAllBuffs()     - 清除所有状态");
             console.log("---------------------------------------");
             console.log("UI界面功能：");
             console.log("  - 属性后的🔓/🔒按钮可以锁定/解锁该属性");
             console.log("  - 锁定后的属性不会随时间变化");
             console.log("  - 锁定的属性在listAttrs()中会显示🔒标记");
+            console.log("  - 白嫖模式按钮可以直接在UI中开启/关闭");
+            console.log("  - 背包扩容按钮可以立即扩容背包");
+            console.log("  - 状态操作可以清除所有负面状态");
             console.log("---------------------------------------");
             console.log("快捷键：");
             console.log("  Alt+X                     - 切换金手指面板");
@@ -119,7 +232,10 @@ function setupCheatConsole() {
             console.log("注意事项：");
             console.log("  1. 属性名必须用引号括起来，例如 'life'");
             console.log("  2. 锁定功能通过拦截游戏内属性变化实现");
-            console.log("  3. 如果金手指面板不显示，可以使用快捷键或刷新页面");
+            console.log("  3. 白嫖模式会跳过材料扣除，直接获得物品");
+            console.log("  4. 背包扩容会修改BAG_CAP变量，可能影响游戏平衡");
+            console.log("  5. 移除状态功能会清除所有buff，包括有益状态");
+            console.log("  6. 如果金手指面板不显示，可以使用快捷键或刷新页面");
             console.log("金手指控制台已加载 🎮");
         };
         
@@ -127,6 +243,8 @@ function setupCheatConsole() {
         window.cheat.status = function() {
             console.log(CHEAT_LOG_PREFIX, "状态:", CHEAT_ENABLED ? "已启用 ✅" : "未启用 ❌");
             console.log(CHEAT_LOG_PREFIX, "面板:", $("#cheatPanel").is(":visible") ? "显示中 👁️" : "已隐藏 🙈");
+            console.log(CHEAT_LOG_PREFIX, "白嫖模式:", WHITE_MODE_ENABLED ? "已开启 🎁" : "已关闭 🚫");
+            console.log(CHEAT_LOG_PREFIX, "背包容量:", BAG_CAP);
         };
         
         // 切换金手指面板
@@ -358,6 +476,26 @@ function setupCheatConsole() {
             updateLockButtonStatus();
             
             console.log(CHEAT_LOG_PREFIX, "所有属性已解锁 ✅");
+        };
+
+        // 白嫖模式切换
+        window.cheat.whiteMode = function() {
+            toggleWhiteMode();
+        };
+
+        // 背包扩容
+        window.cheat.expandBag = function() {
+            expandInventory();
+        };
+
+        // 恢复背包容量
+        window.cheat.restoreBag = function() {
+            restoreInventory();
+        };
+
+        // 移除所有状态
+        window.cheat.removeAllBuffs = function() {
+            removeAllBuffs();
         };
         
         // 打印帮助信息
@@ -688,10 +826,57 @@ function createAttributeRow(attr, name) {
 // 为后续功能预留占位区域
 function createPlaceholderSections() {
     try {
-        // 物品操作（预留）
-        var itemSection = newElement("div", "", "cheatSection", "cheatSection", "<h3>物品操作</h3><p class='comingSoon'>功能开发中...</p>");
+        // 物品操作
+        var itemSection = newElement("div", "", "cheatSection", "cheatSection", "<h3>物品操作</h3>");
+        var itemControls = newElement("div", "", "", "itemControls", "");
+
+        // 白嫖模式按钮
+        var whiteModeBtn = newElement("button", "whiteModeBtn", "", "btn btn-primary cheatBtn", WHITE_MODE_ENABLED ? "关闭白嫖" : "开启白嫖");
+        $(whiteModeBtn).click(function() {
+            toggleWhiteMode();
+        });
+        $(itemControls).append(whiteModeBtn);
+
+        // 背包扩容按钮
+        var expandBagBtn = newElement("button", "", "", "btn btn-success cheatBtn", "背包扩容至999");
+        $(expandBagBtn).click(function() {
+            expandInventory();
+            $(this).text("已扩容 (" + BAG_CAP + ")");
+            $(this).prop("disabled", true);
+            setTimeout(function() {
+                $(expandBagBtn).text("恢复原始容量");
+                $(expandBagBtn).prop("disabled", false);
+                $(expandBagBtn).removeClass("btn-success").addClass("btn-warning");
+                $(expandBagBtn).unbind("click").click(function() {
+                    restoreInventory();
+                    $(expandBagBtn).text("背包扩容至999");
+                    $(expandBagBtn).removeClass("btn-warning").addClass("btn-success");
+                });
+            }, 1000);
+        });
+        $(itemControls).append(expandBagBtn);
+
+        $(itemSection).append(itemControls);
         $("#cheatPanel").append(itemSection);
         
+        // 状态操作
+        var statusSection = newElement("div", "", "cheatSection", "cheatSection", "<h3>状态操作</h3>");
+        var statusControls = newElement("div", "", "", "statusControls", "");
+
+        // 移除所有状态按钮
+        var removeBuffsBtn = newElement("button", "", "", "btn btn-danger cheatBtn", "移除所有状态");
+        $(removeBuffsBtn).click(function() {
+            removeAllBuffs();
+            $(this).text("已清除状态");
+            setTimeout(function() {
+                $(removeBuffsBtn).text("移除所有状态");
+            }, 2000);
+        });
+        $(statusControls).append(removeBuffsBtn);
+
+        $(statusSection).append(statusControls);
+        $("#cheatPanel").append(statusSection);
+
         // 地图功能（预留）
         var mapSection = newElement("div", "", "cheatSection", "cheatSection", "<h3>地图功能</h3><p class='comingSoon'>功能开发中...</p>");
         $("#cheatPanel").append(mapSection);
@@ -706,7 +891,11 @@ function createPlaceholderSections() {
         $(consoleHelp).html(`
             <p>在浏览器控制台(F12)中可使用以下命令:</p>
             <ul>
-                <li><code>cheat.help()</code> - 显示帮助</li>
+                <li><code>cheat.help()</code> - 显示所有命令</li>
+                <li><code>cheat.status()</code> - 显示金手指状态</li>
+                <li><code>cheat.whiteMode()</code> - 切换白嫖模式</li>
+                <li><code>cheat.expandBag()</code> - 扩容背包</li>
+                <li><code>cheat.removeAllBuffs()</code> - 清除状态</li>
             </ul>
         `);
         $(consoleSection).append(consoleHelp);
@@ -888,6 +1077,29 @@ function addCheatStyles() {
             font-style: italic;
             text-align: center;
             padding: 10px;
+        }
+
+        /* 新功能按钮样式 */
+        .cheatBtn {
+            margin: 3px 2px !important;
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+            border-radius: 3px !important;
+            min-width: 80px !important;
+        }
+
+        .itemControls, .statusControls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .itemControls button, .statusControls button {
+            flex: 1;
+            min-width: 120px;
+            max-width: 140px;
         }
         
         .cheatConsoleHelp {

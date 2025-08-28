@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金手指新功能测试</title>
+    <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+</head>
+<body>
+    <h1>金手指新功能测试页面</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        // 模拟游戏环境
+        var PLAYER_STATUS = {
+            life: {value: 100, max: 100, name: "生命"},
+            hunger: {value: 100, max: 100, name: "饱食"},
+            buff: {
+                test_buff: true,
+                another_buff: true
+            }
+        };
+        
+        var STATUS_LIST = ["life", "hunger"];
+        var SPECIAL_LIST = ["endurance"];
+        var BAG_CAP = 12;
+        var TOOL_DATA = {};
+        var TOOL_FINISHED = [];
+        
+        // 模拟游戏函数
+        function updateStatus(attr) {
+            console.log("updateStatus called for:", attr);
+        }
+        
+        function showMsg(msg) {
+            console.log("showMsg:", msg);
+        }
+        
+        function removeBuff(buff) {
+            delete PLAYER_STATUS.buff[buff];
+            console.log("removeBuff called for:", buff);
+        }
+        
+        function newElement(tag, id, name, className, innerHTML) {
+            var elem = document.createElement(tag);
+            if (id) elem.id = id;
+            if (name) elem.name = name;
+            if (className) elem.className = className;
+            if (innerHTML) elem.innerHTML = innerHTML;
+            return elem;
+        }
+        
+        // 加载金手指
+        console.log("正在加载金手指模块...");
+    </script>
+    
+    <script src="data/cheat.js"></script>
+    
+    <script>
+        // 测试新功能
+        setTimeout(function() {
+            console.log("=== 测试新功能 ===");
+            
+            // 测试白嫖模式
+            console.log("1. 测试白嫖模式");
+            if (typeof toggleWhiteMode === 'function') {
+                console.log("✅ toggleWhiteMode 函数存在");
+                toggleWhiteMode();
+            } else {
+                console.log("❌ toggleWhiteMode 函数不存在");
+            }
+            
+            // 测试背包扩容
+            console.log("2. 测试背包扩容");
+            if (typeof expandInventory === 'function') {
+                console.log("✅ expandInventory 函数存在");
+                console.log("原始背包容量:", BAG_CAP);
+                expandInventory();
+                console.log("扩容后背包容量:", BAG_CAP);
+            } else {
+                console.log("❌ expandInventory 函数不存在");
+            }
+            
+            // 测试移除状态
+            console.log("3. 测试移除所有状态");
+            if (typeof removeAllBuffs === 'function') {
+                console.log("✅ removeAllBuffs 函数存在");
+                console.log("移除前的buff:", Object.keys(PLAYER_STATUS.buff));
+                removeAllBuffs();
+                console.log("移除后的buff:", Object.keys(PLAYER_STATUS.buff));
+            } else {
+                console.log("❌ removeAllBuffs 函数不存在");
+            }
+            
+            // 测试控制台命令
+            console.log("4. 测试控制台命令");
+            if (window.cheat) {
+                console.log("✅ window.cheat 对象存在");
+                if (window.cheat.whiteMode) console.log("✅ cheat.whiteMode 存在");
+                if (window.cheat.expandBag) console.log("✅ cheat.expandBag 存在");
+                if (window.cheat.removeAllBuffs) console.log("✅ cheat.removeAllBuffs 存在");
+                
+                // 显示帮助
+                console.log("显示帮助信息:");
+                window.cheat.help();
+            } else {
+                console.log("❌ window.cheat 对象不存在");
+            }
+            
+            console.log("=== 测试完成 ===");
+        }, 2000);
+    </script>
+</body>
+</html>
+

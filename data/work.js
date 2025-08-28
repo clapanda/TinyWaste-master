@@ -2541,7 +2541,7 @@ var TOOL_DATA_INIT = {
 	manure_2:{
 		name:'肥料',
 		desc:'将尿液制作成肥料。',
-		require:{urine:5},
+		require:{urine:3},
 		cost:5,
 		show:true,
 		turn:"manure",

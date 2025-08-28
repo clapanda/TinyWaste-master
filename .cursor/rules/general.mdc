@@ -1,130 +1,117 @@
 ---
-description:
+description: TinyWaste 游戏项目通用开发规范
 globs:
 alwaysApply: true
 ---
 
-You are an expert in JavaScript, TypeScript, and Astro framework for scalable web development.
+You are an expert in JavaScript, jQuery, and web game development, specifically working on the TinyWaste project.
 
 Key Principles
 
-- Write concise, technical responses with accurate Astro examples.
-- Leverage Astro's partial hydration and multi-framework support effectively.
-- Prioritize static generation and minimal JavaScript for optimal performance.
-- Use descriptive variable names and follow Astro's naming conventions.
-- Organize files using Astro's file-based routing system.
+- Write concise, technical responses with accurate JavaScript examples.
+- Prioritize compatibility with the existing TinyWaste game architecture.
+- Use jQuery for DOM manipulation and event handling (project standard).
+- Focus on source code development, let build tools handle minification.
+- Always consider GitHub Pages deployment requirements.
+- Maintain backward compatibility with existing game features.
 
-Astro Project Structure
+TinyWaste Project Structure
 
-- Use the recommended Astro project structure:
-  - src/
-    - components/
-    - layouts/
-    - pages/
-    - styles/
-  - public/
-  - astro.config.mjs
+- Follow the established TinyWaste structure:
+  - data/
+    - cheat.js (source code - edit this)
+    - cheat.min.js (auto-generated - never edit)
+    - lib.js, loader.js, etc.
+  - index.html (main entry point)
+  - build.bat (build script)
+  - package.json (Node.js config)
 
-Component Development
+Cheat System Development
 
-- Create .astro files for Astro components.
-- Use framework-specific components (React, Vue, Svelte) when necessary.
-- Implement proper component composition and reusability.
-- Use Astro's component props for data passing.
-- Leverage Astro's built-in components like when appropriate.
+- Edit source files only: data/cheat.js (never edit data/cheat.min.js).
+- Use jQuery for DOM manipulation and event binding.
+- Implement function hooks to intercept game mechanics.
+- Ensure UI persistence across game state changes.
+- Follow the established cheat module pattern.
 
-Routing and Pages
+Build and Minification Workflow
 
-- Utilize Astro's file-based routing system in the src/pages/ directory.
-- Implement dynamic routes using [...slug].astro syntax.
-- Use getStaticPaths() for generating static pages with dynamic routes.
-- Implement proper 404 handling with a 404.astro page.
+- CRITICAL: Never manually edit .min.js files.
+- After editing source code, always remind user to run build command.
+- Use .\build.bat for simple builds (no dependencies required).
+- Use npm run build for full Node.js build process.
+- Let automated tools handle code compression and optimization.
 
-Content Management
+Game Integration
 
-- Use Markdown (.md) or MDX (.mdx) files for content-heavy pages.
-- Leverage Astro's built-in support for frontmatter in Markdown files.
-- Implement content collections for organized content management.
+- Hook into existing game functions (caculate, costMaterialFunc, etc.).
+- Preserve game compatibility and avoid breaking changes.
+- Use high z-index values for cheat UI elements (9999999).
+- Attach UI directly to document.body for stability.
+- Implement MutationObserver for DOM change detection.
 
-Styling
+Data Management
 
-- Use Astro's scoped styling with tags in .astro files.
-- Leverage global styles when necessary, importing them in layouts.
-- Utilize CSS preprocessing with Sass or Less if required.
-- Implement responsive design using CSS custom properties and media queries.
+- Use localStorage for save/load (GitHub Pages compatible).
+- Maintain PLAYER_STATUS, LOCKED_STATUS global objects.
+- Implement proper error handling for data operations.
+- Log all cheat operations with CHEAT_LOG_PREFIX.
 
-Performance Optimization
+UI/UX Design
 
-- Minimize use of client-side JavaScript; leverage Astro's static generation.
-- Use the client:* directives judiciously for partial hydration:
-  - client:load for immediately needed interactivity
-  - client:idle for non-critical interactivity
-  - client:visible for components that should hydrate when visible
-- Implement proper lazy loading for images and other assets.
-- Utilize Astro's built-in asset optimization features.
+- Use Bootstrap classes for consistent styling.
+- Implement emoji button (🎮) for cheat panel toggle.
+- Create collapsible sections for different cheat categories.
+- Support keyboard shortcuts (Alt+X for panel toggle).
+- Provide visual feedback for all cheat operations.
 
-Data Fetching
+Console Commands
 
-- Use Astro.props for passing data to components.
-- Implement getStaticPaths() for fetching data at build time.
-- Use Astro.glob() for working with local files efficiently.
-- Implement proper error handling for data fetching operations.
+- Implement comprehensive cheat.* command system.
+- Provide cheat.help() with full command documentation.
+- Include parameter validation and error messages.
+- Support both UI and console-based cheat activation.
 
-SEO and Meta Tags
+GitHub Pages Compatibility
 
-- Use Astro's <head> tag for adding meta information.
-- Implement canonical URLs for proper SEO.
-- Use the <SEO> component pattern for reusable SEO setups.
+- Use HTTPS URLs for all external resources.
+- Replace PHP backend with localStorage solutions.
+- Remove domain restrictions and server-side dependencies.
+- Ensure all features work in static hosting environment.
 
-Integrations and Plugins
+Error Handling and Debugging
 
-- Utilize Astro integrations for extending functionality (e.g., @astrojs/image).
-- Implement proper configuration for integrations in astro.config.mjs.
-- Use Astro's official integrations when available for better compatibility.
+- Implement try-catch blocks for all cheat operations.
+- Use console.log with CHEAT_LOG_PREFIX for debugging.
+- Provide meaningful error messages to users.
+- Include fallback mechanisms for critical failures.
 
-Build and Deployment
+Performance Considerations
 
-- Optimize the build process using Astro's build command.
-- Implement proper environment variable handling for different environments.
-- Use static hosting platforms compatible with Astro (Netlify, Vercel, etc.).
-- Implement proper CI/CD pipelines for automated builds and deployments.
-
-Styling with Tailwind CSS
-
-- Integrate Tailwind CSS with Astro @astrojs/tailwind
-
-Tailwind CSS Best Practices
-
-- Use Tailwind utility classes extensively in your Astro components.
-- Leverage Tailwind's responsive design utilities (sm:, md:, lg:, etc.).
-- Utilize Tailwind's color palette and spacing scale for consistency.
-- Implement custom theme extensions in tailwind.config.cjs when necessary.
-- Never use the @apply directive
-
-Testing
-
-- Implement unit tests for utility functions and helpers.
-- Use end-to-end testing tools like Cypress for testing the built site.
-- Implement visual regression testing if applicable.
-
-Accessibility
-
-- Ensure proper semantic HTML structure in Astro components.
-- Implement ARIA attributes where necessary.
-- Ensure keyboard navigation support for interactive elements.
+- Minimize DOM queries and manipulations.
+- Use event delegation for dynamic elements.
+- Implement efficient game state monitoring.
+- Avoid memory leaks in timers and event listeners.
 
 Key Conventions
 
-1. Follow Astro's Style Guide for consistent code formatting.
-2. Use TypeScript for enhanced type safety and developer experience.
-3. Implement proper error handling and logging.
-4. Leverage Astro's RSS feed generation for content-heavy sites.
-5. Use Astro's Image component for optimized image delivery.
+1. Always edit source files, never minified versions.
+2. Run build commands after source code changes.
+3. Test functionality in browser after each build.
+4. Maintain backward compatibility with existing saves.
+5. Document all new cheat features and commands.
 
-Performance Metrics
+Development Workflow
 
-- Prioritize Core Web Vitals (LCP, FID, CLS) in development.
-- Use Lighthouse and WebPageTest for performance auditing.
-- Implement performance budgets and monitoring.
+1. Edit data/cheat.js (source code)
+2. Run .\build.bat (generate minified version)
+3. Test in browser (verify functionality)
+4. Commit source files only (exclude .min.js)
+5. Update documentation as needed
 
-Refer to Astro's official documentation for detailed information on components, routing, and integrations for best practices.
+Token Optimization
+
+- Focus on source code development only.
+- Let build tools handle compression automatically.
+- Avoid outputting large compressed code blocks.
+- Prioritize functionality over manual optimization.
